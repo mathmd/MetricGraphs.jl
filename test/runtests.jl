@@ -9,7 +9,7 @@ using Graphs
     #NOTE: This is temporary
     using Pkg
     using Graphs
-    Pkg.activate(".")
+    # Pkg.activate(".")
     include("./src/Types.jl")
     include("./src/Utils.jl")
 
@@ -30,6 +30,9 @@ using Graphs
 
     # Edge lengths
     L = EdgeFunction(G, 1.0)
+    l = 4.0
+    L[1] = l/2
+    L[end] = l/2
 
     # Metric graph
     Γ = MetricGraph(G,)
