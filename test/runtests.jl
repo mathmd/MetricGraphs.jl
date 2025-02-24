@@ -1,77 +1,169 @@
 #### Files in `test` folder ##
 using MetricGraphs
 using Test
-using StaticArrays
 using Graphs
+using LinearAlgebra
+using LinearSolve
+using SparseArrays
+using Plots, LaTeXStrings
 
-@testset "testing for a certain set of data" begin
+@testset "Testing" begin
 
     #NOTE: This is temporary
     using Pkg
+    Pkg.activate("./test")
     using Graphs
-    # Pkg.activate(".")
-    include("./src/Types.jl")
-    include("./src/Utils.jl")
+    using StaticArrays
+    include("../src/Types.jl")
+    include("../src/Utils.jl")
 
     # Laplacian
     a = 1.0
     b = 0.0
-    c = 0.0
-    H = DivergenceForm(a, b, c)
+    H = DivergenceForm(a, b)
 
-    # Discrete graph
-    G = DiGraph(6)
-    add_edge!(G, 1, 2)
-    add_edge!(G, 2, 3)
-    add_edge!(G, 2, 4)
-    add_edge!(G, 4, 6)
-    add_edge!(G, 5, 6)
-    add_edge!(G, 6, 1)
+    #%% Periodic graph
+    M = 4
+    G = DiGraph(4M + 5)
+    for i in 0:M-1
+        add_edge!(G, 4i + 1, 4i + 2)
+        add_edge!(G, 4i + 2, 4i + 3)
+        add_edge!(G, 4i + 2, 4i + 4)
+        add_edge!(G, 4i + 3, 4i + 5)
+        add_edge!(G, 4i + 4, 4i + 5)
+    end
+    add_edge!(G, 4M + 1, 4M + 2)
+    add_edge!(G, 4M + 2, 4M + 3)
+    add_edge!(G, 4M + 2, 4M + 4)
+    # add_edge!(G, 4M+3, 1)
+    # add_edge!(G, 4M+4, 1)
 
     # Edge lengths
-    L = EdgeFunction(G, 1.0)
-    l = 4.0
-    L[1] = l/2
-    L[end] = l/2
+    L = EdgeVector(G, 1.0)
+    for i in 0:M
+        L[5i+1] = 25.0
+    end
+
+    # δ-type Vertex conditions
+    α = VertexVector(G, 1.0) # α=0 means Dirichlet condition
+    ζ = VertexVector(G, 0.0) # γ=0 means Neumann-Kirchoff condition
 
     # Metric graph
-    Γ = MetricGraph(G,)
+    Γ̃ = MetricGraph(G, L)
 
-    N = 99
-    g, vmap, emap = subdivide_graph(G, N)
+    N = 49
+    Γ, vmap, emap = subdivide_graph(Γ̃, N)
 
-    steps = 1000
-    us = Vector{SVector{nv(g),Float64}}(undef, steps)
-    ts = Vector{Float64}(undef, steps)
+    steps = 2^10
+    u0 = VertexVector(Γ.g, 0.0)
+    us = Vector{Vector{Float64}}(undef, steps)
+    for i in 1:11
+        u0[vmap[i]] .= 1.0
+    end
 
-    # Write your own tests here.
-    A = [2.67485 0.186124 0.583946 -0.145416 0.401269;
-        -0.17813 0.526082 -0.325439 -1.46627 -3.09161;
-        -1.52653 -0.631375 -0.618636 -2.36654 0.291429;
-        -0.609349 -1.0533 -0.323403 1.34789 -0.409167;
-        0.0687345 -0.946264 -0.118661 -1.49908 -1.30312]
 
-    A = A * A'
+    #TODO: make reaction term depends on time and space, and include source in it. 
+    nagumo(u, a) = u * (1 - u) * (u - a)
+    a = 0.2
+    reaction(u) = nagumo(u, a)
 
-    A = (A + A') / 2
+    rd_dynamics!(us, u0, Γ, vmap, emap)
 
-    b = [0.38052039048801956;
-        0.5554436732038299;
-        1.7334160203093987;
-        0.4470254916964832;
-        1.7676230141050555]
+    #%%
 
-    c = 1.0
+    function rd_dynamics!(
+        us,
+        u0,
+        Γ::MetricGraph,
+        vmap,
+        emap;
+        nmntr=2^3, # number of snapshots taken during monitoring
+        frames=2^7,
+        playback=true,
+        start=1,
+        δt=2^-5,
+        stop=nothing,
+        ylims=(0.0, 1.0)
+    )
 
-    v = ones(5)
+        # define operator for updating the concentration
+        Δᵀ = incidence_matrix(Γ.g)
+        # A = abs.(Δᵀ') ./ 2
 
-    problem_data = testPackageProblem(A, b, c)
+        Iᵥ = Diagonal(ones(nv(Γ.g)))
 
-    problem_setting = testPackageSetting(γ=2.0)
+        L_inv = Diagonal(1 ./ Γ.l .^ 2) # living on the edges
 
-    result_approx = [0.10055689253917299, 0.24322623669390434, 0.0693976149433379, 0.09597235131516035, -0.530323239453701]
+        function expT!(
+            u # u∈us
+        )
 
-    @test solver_prox_quad(v, problem_data, problem_setting) ≈ result_approx
+            β = δt * ((-Δᵀ) * L_inv * (-L_inv * Δᵀ'))
+
+            u .= solve(LinearProblem(Iᵥ .+ β, u .+ (δt .* (reaction.(u)))))
+        end
+
+        steps = length(us)
+
+        # iteration
+        if playback
+            nvis = Int(steps / frames)
+        else
+            nvis = Int(steps / nmntr)
+        end
+
+        x = 0.0
+        flattened_edges = []
+        for dedges in emap
+            flattened_coordinate = [x]
+            for e in dedges
+                x += Γ.l[e]
+                push!(flattened_coordinate, x)
+            end
+            push!(flattened_edges, flattened_coordinate)
+        end
+
+        u = Vector{Float64}(u0)
+        n = 1
+
+        if isnothing(stop)
+            stop = steps
+        end
+
+        for n ∈ start:stop
+
+            expT!(u)
+            us[n] = copy(u)
+
+            if n % nvis == 0
+                if playback
+                    plot(flattened_edges[1], u[vmap[1]], ylims=ylims, label="")
+                    for i in 2:length(emap)-1
+                        plot!(
+                            flattened_edges[i],
+                            u[vmap[i]],
+                            label=""
+                            # raw"$e^"*string(i)*raw"$"
+                        )
+                    end
+                    i = length(emap)
+                    display(plot!(
+                        flattened_edges[i],
+                        u[vmap[i]],
+                        label=""
+                        # raw"$e^{"*string(i)*raw"}$"
+                    )
+                    )
+                else
+                    println("progress: $(100*n/steps) %")
+                end
+            end
+        end
+    end
+
+
+
+    # @test solver_prox_quad(v, problem_data, problem_setting) ≈ result_approx
 
 end
 

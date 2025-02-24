@@ -4,7 +4,6 @@ abstract type Hamiltonian end
 mutable struct DivergenceForm{T<:Union{Float64,Array{Float64}}} <: Hamiltonian
         a::T
         b::T
-        c::T
 end
 
 struct EdgeVector{T} <: AbstractVector{T}
@@ -59,3 +58,27 @@ struct MetricGraph
         end
 end
 
+# Vertex-based function vector
+#WARNING: Right now, deleting vertices mess up edge ordering; this structure is only good for adding new vertices. 
+struct VertexVector{T} <: AbstractVector{T}
+        g::DiGraph
+        values::Dict{Int,T}
+        default::T
+
+        function VertexVector(g::DiGraph, default::T) where {T}
+                values = Dict{Int,T}()
+                new{T}(g, values, default)
+        end
+end
+
+Base.size(vv::VertexVector) = (nv(vv.g),)
+
+# Indexing via Vertex
+function Base.getindex(vv::VertexVector, v::Int)
+        get(vv.values, v, vv.default)
+end
+
+# Set value via Vertex
+function Base.setindex!(vv::VertexVector, value, v::Int)
+        vv.values[v] = value
+end
