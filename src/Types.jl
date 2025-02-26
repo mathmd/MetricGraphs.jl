@@ -25,11 +25,6 @@ function Base.getindex(f::EdgeVector, e::Edge)
         get(f.values, e, f.default)  # Return stored value or default
 end
 
-# Indexing via Edge object
-function Base.getindex(f::EdgeVector, e::Edge)
-        get(f.values, e, f.default)  # Return stored value or default
-end
-
 # Indexing via integer (i.e., using edges(g))
 function Base.getindex(f::EdgeVector, i::Int)
         e = collect(edges(f.g))[i]  # Retrieve edge at index i
