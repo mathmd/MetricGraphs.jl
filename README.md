@@ -1,6 +1,7 @@
 # MetricGraphs
 
 [![Build Status](https://github.com/mathmd/MetricGraphs.jl/actions/workflows/CI.yml/badge.svg?branch=main)](https://github.com/mathmd/MetricGraphs.jl/actions/workflows/CI.yml?query=branch%3Amain)
+
 This objective of this Julia package is to provide numerical solvers for PDEs on metric graphs.
 As a start, only first order accurate implicit finite discretization scheme is implemented for a non-homogeneous reaction diffusion equation with Neumann-Kirhhoff condition (See `rd_dynamics!` in `/src/MetricGraphs.jl`.)A usage example can be found in the folder `/examples/`.
 
