@@ -30,3 +30,7 @@ dev git@github.com:mathmd/MetricGraphs.jl.git
 add MetricGraphs
 ```
 Then, `using MetricGraphs` normally to use this package (see examples in `/examples/`.)
+
+To update the package, please pull directly from `~/.julia/dev/MetricGraphs/`.
+
+To uninstall, enter the `Pkg` mode again and enter `rm MetricGraphs`, and delete the folder `~/.julia/dev/MetricGraphs/`.
