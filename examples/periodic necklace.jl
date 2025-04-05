@@ -2,6 +2,7 @@
 using MetricGraphs
 using Graphs
 
+# Specify the metric graph domain
 M = 5
 G = DiGraph(4M + 5)
 for i in 0:M-1
@@ -52,6 +53,8 @@ rd_dynamics!(us, u0, nagumo, 2^-7, Γ, vmap, emap, playback=true)
 
 #%%
 
+using Plots
+
 function plot_sol(x, p)
 
         y = 0.0
@@ -83,7 +86,7 @@ end
 #%%
 
 using BifurcationKit
-
+using LinearAlgebra
 
 function nagumo_ss!(f, x, p, t=0)
         for i in 0:M
@@ -111,6 +114,7 @@ nagumo_ss(x, p, t=0) = nagumo_ss!(similar(x), x, p, t)
 
 #%%
 
+
 prob = BifurcationKit.BifurcationProblem(nagumo_ss, us[end], param, (@optic _.ℓ);
         J=nagumo_jac,
         record_from_solution=(x, p; k...) -> (n2=norm(x), s=sum(x), s2=x[end÷2], s4=x[end÷4], s5=x[end÷5]),
@@ -121,10 +125,10 @@ prob = BifurcationKit.BifurcationProblem(nagumo_ss, us[end], param, (@optic _.�
         #          record_from_solution = (x, p; k...) -> x[div(nv(Γ.g),2)]
 )
 
-optnewton = NewtonPar(tol=1e-11, verbose=true)
-sol = @time BifurcationKit.solve(prob, Newton(), optnewton)
-
-plot_sol(sol.u, param)
+# optnewton = NewtonPar(tol=1e-11, verbose=true)
+# sol = @time BifurcationKit.solve(prob, Newton(), optnewton)
+#
+# plot_sol(sol.u, param)
 
 #%%
 
