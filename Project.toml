@@ -1,7 +1,7 @@
 name = "MetricGraphs"
 uuid = "937ff2e9-c417-41da-932a-255ea702ab69"
 authors = ["Chanoknun (Aiden) Sintavanuruk"]
-version = "1.0.0-DEV"
+version = "0.0.1-DEV"
 
 [deps]
 Graphs = "86223c79-3864-5bf0-83f7-82e725a168b6"

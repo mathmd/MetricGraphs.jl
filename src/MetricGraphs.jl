@@ -36,7 +36,7 @@ function rd_dynamics!(
 
         #TODO: Implement second order accuracy, and optimize solving LinearProblem.
         function expT!(u)
-                u .= solve(LinearProblem(β, u .+ (δt .* reaction.(u))))
+                u .= solve(LinearProblem(β, u .+ (δt .* reaction(u))))
         end
 
         x = 0.0
@@ -88,6 +88,19 @@ function rd_dynamics!(
         end
 end
 
-export rd_dynamics!
+function graph_laplacian(Γ::MetricGraph)
+        Δᵀ = incidence_matrix(Γ.g)
+        L⁻² = Diagonal(1 ./ Γ.l .^ 2)
+
+        Δᵀ * L⁻² * Δᵀ'
+end
+
+function rd_ss!(f, x, p, t=0)
+        f .= p.Δ * x + p.f(x)
+end
+
+rd_ss(x, p, t=0) = rd_ss!(similar(x), x, p, t)
+
+export rd_dynamics!, rd_ss!, rd_ss, graph_laplacian
 
 end # module
