@@ -7,17 +7,23 @@ using Graphs
 
 k = 4 # number of edges on each side of the splitted star graph
 g = DiGraph(2k + 2)
-add_edge!(g, 1, 2)
+add_edge!(g, k + 1, k + 2)
+bridge = Edge(k + 1 => k + 2)
 for j in 1:k
-        add_edge!(g, 2 + j, 1)
-        add_edge!(g, 2, 2 + k + j)
+        add_edge!(g, j, k + 1)
+        add_edge!(g, k + 2, 2 + k + j)
 end
+
+#%% Visualize metric graph
+
+using Plots, GraphRecipes
+gplot = graphplot(g, names=1:nv(g), nodesize=0.3)
 
 #%% Edge Length
 
 l = EdgeVector(g, 25.0) # default length is the truncation of the infinite edges
-ℓ = 10.0 # The length of the bridge
-l[Edge(1 => 2)] = ℓ
+ℓ = 25.0 # The length of the bridge
+l[Edge(k + 1 => k + 2)] = ℓ
 
 #%% Metric Graph
 
@@ -35,14 +41,56 @@ param = (Γ=Γ̃, vmap=vmap, emap=emap, ℓ=ℓ, a=0.4)
 nagumo(u, a) = @. u * (1 - u) * (u - a)
 nagumo(u) = nagumo(u, param.a)
 
-#%% Dynamic simulation for symmetric wave from the left
+#%% Initialize
 
-steps = 2^15
 us = Vector{Vector{Float64}}(undef, steps) # empty vector for dynamic solution
 u0 = VertexVector(param.Γ.g, 0.0)
 for j in 1:k
-        u0[vmap[Edge(2 + j => 1)][1:N÷3]] .= 1.0 # perturb the first 1/3 on the left edges
+        # u0[vmap[Edge(j => k+1)][1:N÷3]] .= 1.0 # perturb the first 1/3 on the left edges
+        u0[vmap[Edge(j => k + 1)]] .= 1.0 # perturb the whole left edges
 end
+u0[vmap[bridge][1:2N÷3]] .= 1.0
+
+#%% Dynamic simulation for symmetric wave from the left
+
+steps = 2^15
 rd_dynamics!(us, u0, nagumo, 2^-7, param.Γ, vmap, emap, playback=true)
 
+#%% Numerical continuation
+
+using BifurcationKit
+using LinearAlgebra
+
+function nagumo_ss!(f, x, p, t=0)
+        p.Γ.l[bridge] = p.ℓ
+        L⁻² = Diagonal(1 ./ p.Γ.l .^ 2)
+
+        f .= -Δᵀ * L⁻² * Δᵀ' * x + nagumo(x, p.a)
+end
+
+function nagumo_jac(x, p)
+        p.Γ.l[bridge] = p.ℓ
+        L⁻² = Diagonal(1 ./ p.Γ.l .^ 2)
+
+        -Δᵀ * L⁻² * Δᵀ' + Diagonal(x .* (2(p.a + 1) .- 3x) .- p.a)
+end
+
+nagumo_ss(x, p, t=0) = nagumo_ss!(similar(x), x, p, t)
+
+prob = BifurcationKit.BifurcationProblem(nagumo_ss, us[end], param, (@optic _.ℓ);
+        J=nagumo_jac,
+        record_from_solution=(x, p; k...) -> (m = x[vmap[bridge][end÷2]]),
+        plot_solution=(x, p; kwargs...) -> plot!(x; ylabel="solution", label="", kwargs...),
+)
+
+optnewton = NewtonPar(tol=1e-11, verbose=true)
+sol = @time BifurcationKit.solve(prob, Newton(), optnewton)
+
+plot_sol(sol.u, param)
+
 #%%
+
+optcont = ContinuationPar(dsmin=0.001, dsmax=0.2, ds=0.1, p_min=0.0, p_max=25.0,
+        newton_options=NewtonPar(max_iterations=10, tol=1e-9), max_steps=1000, n_inversion=4)
+
+br = continuation(prob, PALC(), optcont, bothside=true, normC=norminf; plot=true)
