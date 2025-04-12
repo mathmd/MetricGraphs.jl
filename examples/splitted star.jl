@@ -49,7 +49,9 @@ for j in 1:k
         # u0[vmap[Edge(j => k+1)][1:N÷3]] .= 1.0 # perturb the first 1/3 on the left edges
         u0[vmap[Edge(j => k + 1)]] .= 1.0 # perturb the whole left edges
 end
-u0[vmap[bridge][1:2N÷3]] .= 1.0
+u0[vmap[bridge][1:2N÷3]] .= 1.0 # purturb the first two half of the bridge
+
+# u0[vmap[bridge][N÷3:2N÷3]] .= 1.0 # perturb middle part of the bridge
 
 #%% Dynamic simulation for symmetric wave from the left
 
