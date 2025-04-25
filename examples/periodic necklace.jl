@@ -17,6 +17,8 @@ add_edge!(G, 4M + 2, 4M + 3)
 add_edge!(G, 4M + 2, 4M + 4)
 # add_edge!(G, 4M + 3, 1)
 # add_edge!(G, 4M + 4, 1)
+add_edge!(G, 4M + 3, 4M + 5)
+add_edge!(G, 4M + 4, 4M + 5)
 
 # Edge lengths
 L = EdgeVector(G, 5.0)
@@ -25,6 +27,13 @@ for i in 0:M
         # L[5i+1] = 25.0
         L[5i+1] = ℓ
 end
+
+#%% Visualize metric graph
+
+using Plots, GraphRecipes
+gplot = graphplot(G, names=1:nv(G), nodesize=0.3)
+
+#%%
 
 # Metric graph
 Γ̃ = MetricGraph(G, L)
@@ -91,7 +100,7 @@ using LinearAlgebra
 function nagumo_ss!(f, x, p, t=0)
         for i in 0:M
                 for e in p.emap[5i+1]
-                        p.Γ.l[e] = p.ℓ
+                        p.Γ.l[e] = p.ℓ / (N + 1)
                 end
         end
         L⁻² = Diagonal(1 ./ p.Γ.l .^ 2)
@@ -102,7 +111,7 @@ end
 function nagumo_jac(x, p)
         for i in 0:M
                 for e in p.emap[5i+1]
-                        p.Γ.l[e] = p.ℓ
+                        p.Γ.l[e] = p.ℓ / (N + 1)
                 end
         end
         L⁻² = Diagonal(1 ./ p.Γ.l .^ 2)
@@ -125,14 +134,16 @@ prob = BifurcationKit.BifurcationProblem(nagumo_ss, us[end], param, (@optic _.�
         #          record_from_solution = (x, p; k...) -> x[div(nv(Γ.g),2)]
 )
 
-# optnewton = NewtonPar(tol=1e-11, verbose=true)
-# sol = @time BifurcationKit.solve(prob, Newton(), optnewton)
-#
-# plot_sol(sol.u, param)
+#%%
+
+optnewton = NewtonPar(tol=1e-11, verbose=true)
+sol = @time BifurcationKit.solve(prob, Newton(), optnewton)
+
+plot_sol(sol.u, param)
 
 #%%
 
-optcont = ContinuationPar(dsmin=0.001, dsmax=0.2, ds=0.1, p_min=0.0, p_max=25.0,
+optcont = ContinuationPar(dsmin=1e-7, dsmax=0.2, ds=0.1, p_min=0.0, p_max=50.0,
         newton_options=NewtonPar(max_iterations=10, tol=1e-9), max_steps=1000, n_inversion=4)
 
 # opts_br_eq = ContinuationPar(dsmin=0.01, dsmax=0.1, ds=0.1,
@@ -146,3 +157,7 @@ optcont = ContinuationPar(dsmin=0.001, dsmax=0.2, ds=0.1, p_min=0.0, p_max=25.0,
 br = continuation(prob, PALC(), optcont, bothside=true, normC=norminf; plot=true)
 
 #%%
+
+plot_sol(br.specialpoint[1].x, param)
+
+#%% 
