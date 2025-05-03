@@ -1,5 +1,13 @@
 #TODO: Make N depends on the edges
 #TODO: Make subdivide_graph into a structure so that it automatically subdivide Γ when the main graph changes.
+
+function update_length!(mgd::MetricGraphDomain, e::Union{Edge,Int}, new_length::Float64)
+        mgd.Γ.l[e] = new_length
+        for edge ∈ mgd.emap[e]
+                mgd.Γ̃.l[edge] = new_length / (mgd.res + 1)
+        end
+end
+
 function subdivide_graph(Γ::MetricGraph, N::Int)
         G = Γ.g
         L = Γ.l

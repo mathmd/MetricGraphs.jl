@@ -5,10 +5,10 @@ using Plots
 using ProgressBars
 
 include("./Types.jl")
-export MetricGraph, VertexVector, EdgeVector
+export MetricGraph, VertexVector, EdgeVector, MetricGraphDomain
 
 include("./Utils.jl")
-export subdivide_graph
+export subdivide_graph, update_length!
 
 #TODO: make reaction term depends on time and space, and include source in it. 
 function rd_dynamics!(

@@ -7,11 +7,11 @@ mutable struct DivergenceForm{T<:Union{Float64,Array{Float64}}} <: Hamiltonian
 end
 
 struct EdgeVector{T} <: AbstractVector{T}
-        g::SimpleDiGraph
+        g::DiGraph
         values::Dict{Edge,T}  # Map from Edge => Value
         default::T  # Default value for edges not in Dict
 
-        function EdgeVector(g::SimpleDiGraph, default::T) where {T}
+        function EdgeVector(g::DiGraph, default::T) where {T}
                 values = Dict{Edge,T}()
                 new{T}(g, values, default)
         end
@@ -50,6 +50,19 @@ struct MetricGraph
                         error("Need to specify $(ne(g)) edge lengths.")
                 end
                 new(g, l)
+        end
+end
+
+struct MetricGraphDomain
+        Γ::MetricGraph
+        res::Int     # number of vertices inserted 
+        Γ̃::MetricGraph   # Subdivided graph
+        vmap::EdgeVector{Vector{Int}}
+        emap::EdgeVector{Vector{Edge}}
+        # constructing function
+        function MetricGraphDomain(Γ::MetricGraph, res::Int)
+                Γ̃, vmap, emap = subdivide_graph(Γ, res)
+                new(Γ, res, Γ̃, vmap, emap)
         end
 end
 
