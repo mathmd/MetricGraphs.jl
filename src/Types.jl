@@ -59,11 +59,34 @@ struct MetricGraphDomain
         Γ̃::MetricGraph   # Subdivided graph
         vmap::EdgeVector{Vector{Int}}
         emap::EdgeVector{Vector{Edge}}
+        edge_embedding::EdgeVector{Vector{Any}}
         # constructing function
-        function MetricGraphDomain(Γ::MetricGraph, res::Int)
+        function MetricGraphDomain(Γ::MetricGraph, res::Int; edge_embedding=EdgeVector(Γ.g, []))
                 Γ̃, vmap, emap = subdivide_graph(Γ, res)
-                new(Γ, res, Γ̃, vmap, emap)
+                new(Γ, res, Γ̃, vmap, emap, edge_embedding)
         end
+end
+
+@recipe function f(mgd::MetricGraphDomain, u::Vector{Float64})
+        # Plot the metric graph embedded into the xy plane
+        @series begin
+                seriestype := :path3d
+                linecolor := :black
+                label := ""
+                [(mgd.edge_embedding[e]..., zeros(length(mgd.vmap[e]))) for e in edges(mgd.Γ.g)]
+        end
+        # Plot the function u on metric graph
+        @series begin
+                seriestype := :path3d
+                label := ""
+                linecolor --> :blue
+                [(mgd.edge_embedding[e]..., u[mgd.vmap[e]]) for e in edges(mgd.Γ.g)]
+        end
+        linecolor --> :blue
+        label --> ""
+        aspect_ratio --> :equal
+        zlims --> (0.0, 1.0)
+        []
 end
 
 # Vertex-based function vector

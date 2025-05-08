@@ -26,7 +26,8 @@ using Graphs
 
     N = 999
     M = 3(N + 1)
-    Γ, vmap, emap = subdivide_graph(Γ̃, N)
+    # Γ, vmap, emap = subdivide_graph(Γ̃, N)
+    mgd = MetricGraphDomain(Γ̃, N)
 
     steps = 100
     δt = 2^-9
@@ -36,7 +37,7 @@ using Graphs
 
     reaction = u -> 0.0
 
-    rd_dynamics!(us, u0, reaction, δt, Γ, vmap, emap)
+    rd_dynamics!(us, u0, reaction, mgd, δt=δt)
 
     @test length(unique(reduce(vcat, vmap))) == M
 

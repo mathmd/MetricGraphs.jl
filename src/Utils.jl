@@ -8,6 +8,14 @@ function update_length!(mgd::MetricGraphDomain, e::Union{Edge,Int}, new_length::
         end
 end
 
+function embed_metricgraph!(mgd::MetricGraphDomain, v_embed::Vector{Tuple{Float64,Float64}})
+        for e ∈ edges(mgd.Γ.g)
+                mgd.edge_embedding[e] = []
+                o, t = v_embed[src(e)], v_embed[dst(e)]
+                push!(mgd.edge_embedding[e], range(o[1], t[1], mgd.res + 2), range(o[end], t[end], mgd.res + 2))
+        end
+end
+
 function subdivide_graph(Γ::MetricGraph, N::Int)
         G = Γ.g
         L = Γ.l
@@ -58,3 +66,12 @@ function subdivide_graph(Γ::MetricGraph, N::Int)
 
         return MetricGraph(subdivided, l), vertex_map, edge_map
 end
+
+# function plot(mgd::MetricGraphDomain,u::Vector{Float64},kwargs...)
+#         # Plot the metric graph embedded into the xy plane
+#         plot(,kwargs...)
+#         # Plot u on each edge of mgd.Γ
+#         for e ∈ edges(mgd.Γ)
+#                 v_on_e = mgd.vmap[e]
+#         end
+# end

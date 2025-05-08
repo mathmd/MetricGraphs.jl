@@ -8,23 +8,28 @@ include("./Types.jl")
 export MetricGraph, VertexVector, EdgeVector, MetricGraphDomain
 
 include("./Utils.jl")
-export subdivide_graph, update_length!
+export subdivide_graph, update_length!, embed_metricgraph!
 
 #TODO: make reaction term depends on time and space, and include source in it. 
 function rd_dynamics!(
         us,
         u0,
         reaction,
-        δt,
-        Γ::MetricGraph,
-        vmap,
-        emap;
+        # Γ::MetricGraph,
+        # vmap,
+        # emap;
+        mgd;
+        # p;
+        δt=2^-7,
         frames=2^7,
-        playback=false,
+        playback=true,
         start=1,
         stop=nothing,
         ylims=(0.0, 1.0)
 )
+        Γ = mgd.Γ̃
+        vmap = mgd.vmap
+        emap = mgd.emap
 
         Δᵀ = incidence_matrix(Γ.g)
         # A = abs.(Δᵀ') ./ 2
@@ -39,16 +44,16 @@ function rd_dynamics!(
                 u .= solve(LinearProblem(β, u .+ (δt .* reaction(u))))
         end
 
-        x = 0.0
-        flattened_edges = []
-        for dedges in emap
-                flattened_coordinate = [x]
-                for e in dedges
-                        x += Γ.l[e]
-                        push!(flattened_coordinate, x)
-                end
-                push!(flattened_edges, flattened_coordinate)
-        end
+        # x = 0.0
+        # flattened_edges = []
+        # for dedges in emap
+        #         flattened_coordinate = [x]
+        #         for e in dedges
+        #                 x += Γ.l[e]
+        #                 push!(flattened_coordinate, x)
+        #         end
+        #         push!(flattened_edges, flattened_coordinate)
+        # end
 
         u = Vector{Float64}(u0)
         n = 1
@@ -70,20 +75,21 @@ function rd_dynamics!(
                 us[n] = copy(u)
 
                 if playback && n % nvis == 0
-                        plot(flattened_edges[1], u[vmap[1]], ylims=ylims, label="")
-                        for i in 2:length(emap)-1
-                                plot!(
-                                        flattened_edges[i],
-                                        u[vmap[i]],
-                                        label=""
-                                )
-                        end
-                        i = length(emap)
-                        display(plot!(
-                                flattened_edges[i],
-                                u[vmap[i]],
-                                label=""
-                        ))
+                        #         plot(flattened_edges[1], u[vmap[1]], ylims=ylims, label="")
+                        #         for i in 2:length(emap)-1
+                        #                 plot!(
+                        #                         flattened_edges[i],
+                        #                         u[vmap[i]],
+                        #                         label=""
+                        #                 )
+                        #         end
+                        #         i = length(emap)
+                        #         display(plot!(
+                        #                 flattened_edges[i],
+                        #                 u[vmap[i]],
+                        #                 label=""
+                        #         ))
+                        display(plot(mgd, u))
                 end
         end
 end

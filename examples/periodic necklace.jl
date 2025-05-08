@@ -40,7 +40,9 @@ gplot = graphplot(G, names=1:nv(G), nodesize=0.3)
 
 # discretize MetricGraph
 N = 49
-Γ, vmap, emap = subdivide_graph(Γ̃, N)
+# Γ, vmap, emap = subdivide_graph(Γ̃, N)
+mgd = MetricGraphDomain(Γ̃, N)
+Γ, vmap, emap = mgd.Γ̃, mgd.vmap, mgd.emap
 Δᵀ = incidence_matrix(Γ.g)
 
 #parameters
@@ -58,7 +60,7 @@ end
 nagumo(u, a) = @. u * (1 - u) * (u - a)
 nagumo(u) = nagumo(u, param.a)
 
-rd_dynamics!(us, u0, nagumo, 2^-7, Γ, vmap, emap, playback=true)
+rd_dynamics!(us, u0, nagumo, mgd, playback=true)
 
 #%%
 
