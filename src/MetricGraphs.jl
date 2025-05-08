@@ -14,12 +14,12 @@ export subdivide_graph, update_length!, embed_metricgraph!
 function rd_dynamics!(
         us,
         u0,
-        reaction,
+        # reaction,
         # Γ::MetricGraph,
         # vmap,
         # emap;
-        mgd;
-        # p;
+        # mgd;
+        p;
         δt=2^-7,
         frames=2^7,
         playback=true,
@@ -27,9 +27,9 @@ function rd_dynamics!(
         stop=nothing,
         ylims=(0.0, 1.0)
 )
-        Γ = mgd.Γ̃
-        vmap = mgd.vmap
-        emap = mgd.emap
+        Γ = p.mgd.Γ̃
+        vmap = p.mgd.vmap
+        emap = p.mgd.emap
 
         Δᵀ = incidence_matrix(Γ.g)
         # A = abs.(Δᵀ') ./ 2
@@ -41,7 +41,7 @@ function rd_dynamics!(
 
         #TODO: Implement second order accuracy, and optimize solving LinearProblem.
         function expT!(u)
-                u .= solve(LinearProblem(β, u .+ (δt .* reaction(u))))
+                u .= solve(LinearProblem(β, u .+ (δt .* p.reaction(u))))
         end
 
         # x = 0.0
@@ -89,7 +89,7 @@ function rd_dynamics!(
                         #                 u[vmap[i]],
                         #                 label=""
                         #         ))
-                        display(plot(mgd, u))
+                        display(plot(p.mgd, u))
                 end
         end
 end
@@ -102,11 +102,23 @@ function graph_laplacian(Γ::MetricGraph)
 end
 
 function rd_ss!(f, x, p, t=0)
+        p.update_length()
+        L⁻² = Diagonal(1 ./ p.mgd.Γ̃.l .^ 2)
+        Δᵀ = incidence_matrix(p.mgd.Γ.g)
+
+        f .= -Δᵀ * L⁻² * Δᵀ' * x + p.reaction(x, p.a)
         f .= p.Δ * x + p.f(x)
+end
+
+function nagumo_jac(x, p)
+        p.update_length()
+        L⁻² = Diagonal(1 ./ p.mgd.Γ̃.l .^ 2)
+        Δᵀ = incidence_matrix(p.mgd.Γ.g)
+        -Δᵀ * L⁻² * Δᵀ' + Diagonal(x .* (2(p.a + 1) .- 3x) .- p.a)
 end
 
 rd_ss(x, p, t=0) = rd_ss!(similar(x), x, p, t)
 
-export rd_dynamics!, rd_ss!, rd_ss, graph_laplacian
+export rd_dynamics!, rd_ss!, rd_ss, graph_laplacian, nagumo_jac
 
 end # module
