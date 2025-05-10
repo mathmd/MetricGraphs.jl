@@ -42,6 +42,32 @@ function Base.setindex!(f::EdgeVector, value, i::Int)
         f[e] = value
 end
 
+# ✅ Multiple edge keys
+# function Base.setindex!(ev::EdgeVector, vals::AbstractVector, es::AbstractVector{<:Union{Edge,Int}})
+#         @assert length(vals) == length(es) "Mismatched assignment length"
+#         for (e, v) in zip(es, vals)
+#                 ev[e] = v
+#         end
+# end
+
+# --- Vectorized get/set by Edge vector ---
+Base.getindex(ev::EdgeVector, es::AbstractVector{<:Edge}) = [ev[e] for e in es]
+Base.setindex!(ev::EdgeVector, vals::AbstractVector, es::AbstractVector{<:Edge}) = foreach((e, v) -> ev[e] = v, es, vals)
+
+# Broadcasting into edge index slices
+function Base.setindex!(ev::EdgeVector{T}, val::T, es::AbstractVector{<:Edge}) where {T}
+        for e in es
+                ev[e] = val
+        end
+end
+
+Base.checkbounds(::Type{Bool}, A::EdgeVector, e::Edge) = true
+
+Base.checkbounds(::Type{Bool}, A::EdgeVector, inds::AbstractVector{<:Edge}) = false
+
+# Tell Julia that EdgeVector is mutable and supports broadcast setindex!
+Base.broadcastable(ev::EdgeVector) = ev
+
 struct MetricGraph
         g::DiGraph
         l::EdgeVector{Float64}

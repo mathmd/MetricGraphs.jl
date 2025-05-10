@@ -4,46 +4,66 @@ using Graphs
 
 # Specify the metric graph domain
 M = 5
-G = DiGraph(4M + 5)
-for i in 0:M-1
-        add_edge!(G, 4i + 1, 4i + 2)
-        add_edge!(G, 4i + 2, 4i + 3)
-        add_edge!(G, 4i + 2, 4i + 4)
-        add_edge!(G, 4i + 3, 4i + 5)
-        add_edge!(G, 4i + 4, 4i + 5)
-end
-add_edge!(G, 4M + 1, 4M + 2)
-add_edge!(G, 4M + 2, 4M + 3)
-add_edge!(G, 4M + 2, 4M + 4)
+g = DiGraph(4M + 5)
+l =
+        for i in 0:M-1
+                add_edge!(g, 4i + 1, 4i + 2)
+                add_edge!(g, 4i + 2, 4i + 3)
+                add_edge!(g, 4i + 2, 4i + 4)
+                add_edge!(g, 4i + 3, 4i + 5)
+                add_edge!(g, 4i + 4, 4i + 5)
+        end
+add_edge!(g, 4M + 1, 4M + 2)
+add_edge!(g, 4M + 2, 4M + 3)
+add_edge!(g, 4M + 2, 4M + 4)
 # add_edge!(G, 4M + 3, 1)
 # add_edge!(G, 4M + 4, 1)
-add_edge!(G, 4M + 3, 4M + 5)
-add_edge!(G, 4M + 4, 4M + 5)
+add_edge!(g, 4M + 3, 4M + 5)
+add_edge!(g, 4M + 4, 4M + 5)
 
 # Edge lengths
-L = EdgeVector(G, 5.0)
+l = EdgeVector(g, 5.0)
 ℓ = 18.0
 for i in 0:M
         # L[5i+1] = 25.0
-        L[5i+1] = ℓ
+        l[5i+1] = ℓ
 end
 
 #%% Visualize metric graph
 
 using Plots, GraphRecipes
-gplot = graphplot(G, names=1:nv(G), nodesize=0.3)
+gplot = graphplot(g, names=1:nv(g), nodesize=0.3)
 
 #%%
 
 # Metric graph
-Γ̃ = MetricGraph(G, L)
+Γ = MetricGraph(g, l)
 
 # discretize MetricGraph
 N = 49
 # Γ, vmap, emap = subdivide_graph(Γ̃, N)
-mgd = MetricGraphDomain(Γ̃, N)
-Γ, vmap, emap = mgd.Γ̃, mgd.vmap, mgd.emap
-Δᵀ = incidence_matrix(Γ.g)
+mgd = MetricGraphDomain(Γ, N)
+# Γ, vmap, emap = mgd.Γ̃, mgd.vmap, mgd.emap
+# Δᵀ = incidence_matrix(Γ.g)
+vertex_embedding = Vector{Tuple{Float64,Float64}}(undef, nv(g))
+# for v ∈ 1:num_rungs+2
+#         vertex_embedding[v] = (v, 1)
+#         vertex_embedding[v+num_rungs+2] = (v, 0)
+# end
+for m in 0:M
+        vertex_embedding[4m+1] = (m, 0)
+        vertex_embedding[4m+2] = (m + 0.5, 0.5)
+        vertex_embedding[4m+3] = (m + 0.5, -0.5)
+        vertex_embedding[4m+4] = (m + 1, 0.0)
+end
+vertex_embedding[4M+5] = (M + 2, 0.0)
+# vertex_embedding[4M+1] = (M,0)
+# vertex_embedding[4M+2] = (M+0.5,0.5)
+# vertex_embedding[4M+3] = (M+0.5,-0.5)
+# vertex_embedding[4M+4] = (M+1,0.0)
+embed_metricgraph!(mgd, vertex_embedding)
+# Simple visualization
+plot(mgd, zeros(nv(mgd.Γ̃.g)), linecolor=:black)
 
 #parameters
 param = (Γ=Γ, vmap=vmap, emap=emap, ℓ=ℓ, a=0.2)
@@ -62,6 +82,32 @@ nagumo(u) = nagumo(u, param.a)
 
 rd_dynamics!(us, u0, nagumo, mgd, playback=true)
 
+#%% defining parameters
+Base.@kwdef mutable struct ModelParameters
+        mgd::MetricGraphDomain = mgd # metric graph
+        reaction::Function = y -> broadcast(x -> 0.0, y)
+        update_length::Union{Function,Nothing} = nothing
+        a::Float64 = 0.25 # Nagumo parameter
+        ℓ::Float64 = 25.0 # rungs length
+        L::Float64 = 25.0 # rail segment length
+end
+param = ModelParameters(a=0.45)
+nagumo(u) = @. u * (1 - u) * (u - param.a)
+param.reaction = nagumo
+# below is for numerical continuation w.r.t. ℓ
+ℓ = 18.0
+param.ℓ = ℓ # make the scope of ℓ global
+ℓ = 25.0
+bridges = []
+for i in 0:M
+        # L[5i+1] = 25.0
+        push!(bridges, collect(edges(mgd.Γ.g))[5i+1])
+end
+param.update_length() = begin
+        for e ∈ bridges
+                update_length!(mgd, e, ℓ)
+        end
+end
 #%%
 
 using Plots
