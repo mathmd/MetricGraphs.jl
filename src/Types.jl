@@ -61,10 +61,6 @@ function Base.setindex!(ev::EdgeVector{T}, val::T, es::AbstractVector{<:Edge}) w
         end
 end
 
-Base.checkbounds(::Type{Bool}, A::EdgeVector, e::Edge) = true
-
-Base.checkbounds(::Type{Bool}, A::EdgeVector, inds::AbstractVector{<:Edge}) = false
-
 # Tell Julia that EdgeVector is mutable and supports broadcast setindex!
 Base.broadcastable(ev::EdgeVector) = ev
 

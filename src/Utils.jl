@@ -2,9 +2,21 @@
 #TODO: Make subdivide_graph into a structure so that it automatically subdivide Γ when the main graph changes.
 
 function update_length!(mgd::MetricGraphDomain, e::Union{Edge,Int}, new_length::Float64)
+        """
+        Update length of an edge `e` in `mgd.Γ` (`mgd.Γ.l[e]`) with `new_length` along with the corresponding discritization `mgd.Γ̃`.
+        """
         mgd.Γ.l[e] = new_length
         for edge ∈ mgd.emap[e]
                 mgd.Γ̃.l[edge] = new_length / (mgd.res + 1)
+        end
+end
+
+function update_length!(mgd::MetricGraphDomain, edges::Vector{Union{Edge,Int}}, new_length::Float64)
+        """
+        Update multiple edges in `edges`
+        """
+        for e ∈ edges
+                update_length!(mgd, e, new_length)
         end
 end
 
