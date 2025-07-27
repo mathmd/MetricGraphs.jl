@@ -41,7 +41,7 @@ function rd_dynamics!(
 
         #TODO: Implement second order accuracy, and optimize solving LinearProblem.
         function expT!(u)
-                u .= solve(LinearProblem(β, u .+ (δt .* p.reaction(u))))
+                u .= solve(LinearProblem(β, u .+ (δt .* p.reaction(u, p.a))))
         end
 
         # x = 0.0
@@ -101,20 +101,29 @@ function graph_laplacian(Γ::MetricGraph)
         Δᵀ * L⁻² * Δᵀ'
 end
 
+# the format of the input here is restricted,
+# since we want to do continuation using BifurcationKit.jl
 function rd_ss!(f, x, p, t=0)
-        p.update_length()
-        L⁻² = Diagonal(1 ./ p.mgd.Γ̃.l .^ 2)
-        Δᵀ = incidence_matrix(p.mgd.Γ.g)
+        lengths, Δᵀ = p.compute_lengths(p)
+        # L⁻² = Diagonal(1 ./ p.mgd.Γ̃.l .^ 2)
+        L⁻² = Diagonal(1 ./ lengths .^ 2)
+        # Δᵀ = incidence_matrix(p.mgd.Γ̃.g)
+        # Δᵀ = p.incmat
 
         f .= -Δᵀ * L⁻² * Δᵀ' * x + p.reaction(x, p.a)
-        f .= p.Δ * x + p.f(x)
+        # f .= p.Δ * x + p.f(x)
 end
 
-function nagumo_jac(x, p)
-        p.update_length()
-        L⁻² = Diagonal(1 ./ p.mgd.Γ̃.l .^ 2)
-        Δᵀ = incidence_matrix(p.mgd.Γ.g)
-        -Δᵀ * L⁻² * Δᵀ' + Diagonal(x .* (2(p.a + 1) .- 3x) .- p.a)
+function nagumo_jac(x::AbstractVector{T}, p) where {T}
+        lengths, Δᵀ = p.compute_lengths(p)
+        # L⁻² = Diagonal(1 ./ T.(p.mgd.Γ̃.l) .^ 2)
+        L⁻² = Diagonal(1 ./ lengths .^ 2)
+        # Δᵀ = incidence_matrix(p.mgd.Γ̃.g)
+        # Δᵀ = convert(AbstractMatrix{T}, p.incmat)
+
+        # J = similar(x, length(x), length(x)) # for automatic differentiation
+        a = T(p.a)
+        -Δᵀ * L⁻² * Δᵀ' + Diagonal(x .* (2(a + 1) .- 3x) .- a)
 end
 
 rd_ss(x, p, t=0) = rd_ss!(similar(x), x, p, t)

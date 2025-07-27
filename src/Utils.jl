@@ -1,7 +1,7 @@
 #TODO: Make N depends on the edges
 #TODO: Make subdivide_graph into a structure so that it automatically subdivide Γ when the main graph changes.
 
-function update_length!(mgd::MetricGraphDomain, e::Union{Edge,Int}, new_length::Float64)
+function update_length!(mgd::MetricGraphDomain{T}, e::Union{Edge,Int}, new_length::Real) where {T<:Real}
         """
         Update length of an edge `e` in `mgd.Γ` (`mgd.Γ.l[e]`) with `new_length` along with the corresponding discritization `mgd.Γ̃`.
         """
@@ -11,7 +11,7 @@ function update_length!(mgd::MetricGraphDomain, e::Union{Edge,Int}, new_length::
         end
 end
 
-function update_length!(mgd::MetricGraphDomain, edges::Vector{Union{Edge,Int}}, new_length::Float64)
+function update_length!(mgd::MetricGraphDomain{T}, edges::Union{Vector{Edge},Vector{Int}}, new_length::Real) where {T<:Real}
         """
         Update multiple edges in `edges`
         """
@@ -20,7 +20,14 @@ function update_length!(mgd::MetricGraphDomain, edges::Vector{Union{Edge,Int}}, 
         end
 end
 
-function embed_metricgraph!(mgd::MetricGraphDomain, v_embed::Vector{Tuple{Float64,Float64}})
+function update_length!(lengths::EdgeVector{T}, mgd::MetricGraphDomain, e::Union{Edge,Int}, new_length::T) where {T<:Real}
+        # lengths = EdgeVector{T}(mgd.Γ̃.g, T(0))
+        for edge ∈ mgd.emap[e]
+                lengths[edge] = new_length / T(mgd.res + 1)
+        end
+end
+
+function embed_metricgraph!(mgd::MetricGraphDomain, v_embed::Vector{Tuple{T,T}}) where {T<:Real}
         for e ∈ edges(mgd.Γ.g)
                 mgd.edge_embedding[e] = []
                 o, t = v_embed[src(e)], v_embed[dst(e)]
@@ -28,7 +35,7 @@ function embed_metricgraph!(mgd::MetricGraphDomain, v_embed::Vector{Tuple{Float6
         end
 end
 
-function subdivide_graph(Γ::MetricGraph, N::Int)
+function subdivide_graph(Γ::MetricGraph{T}, N::Int) where {T<:Real}
         G = Γ.g
         L = Γ.l
         subdivided = DiGraph(nv(G))

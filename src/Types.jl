@@ -1,7 +1,7 @@
 abstract type Hamiltonian end
 
 #TODO: Make a,b,c non-constant
-mutable struct DivergenceForm{T<:Union{Float64,Array{Float64}}} <: Hamiltonian
+mutable struct DivergenceForm{T<:Union{Real,Array{Real}}} <: Hamiltonian
         a::T
         b::T
 end
@@ -64,32 +64,34 @@ end
 # Tell Julia that EdgeVector is mutable and supports broadcast setindex!
 Base.broadcastable(ev::EdgeVector) = ev
 
-struct MetricGraph
+struct MetricGraph{T<:Real}
         g::DiGraph
-        l::EdgeVector{Float64}
-        function MetricGraph(g, l)
+        l::EdgeVector{T}
+        function MetricGraph(g::DiGraph, l::EdgeVector{T}) where {T}
                 if length(l) != ne(g)
                         error("Need to specify $(ne(g)) edge lengths.")
                 end
-                new(g, l)
+                new{T}(g, l)
         end
 end
 
-struct MetricGraphDomain
-        Γ::MetricGraph
+struct MetricGraphDomain{T<:Real}
+        Γ::MetricGraph{T}
         res::Int     # number of vertices inserted 
-        Γ̃::MetricGraph   # Subdivided graph
+        Γ̃::MetricGraph{T}   # Subdivided graph
         vmap::EdgeVector{Vector{Int}}
         emap::EdgeVector{Vector{Edge}}
         edge_embedding::EdgeVector{Vector{Any}}
         # constructing function
-        function MetricGraphDomain(Γ::MetricGraph, res::Int; edge_embedding=EdgeVector(Γ.g, []))
+        function MetricGraphDomain(Γ::MetricGraph{T}, res::Int;
+                edge_embedding=EdgeVector(Γ.g, [])) where {T}
+
                 Γ̃, vmap, emap = subdivide_graph(Γ, res)
-                new(Γ, res, Γ̃, vmap, emap, edge_embedding)
+                new{T}(Γ, res, Γ̃, vmap, emap, edge_embedding)
         end
 end
 
-@recipe function f(mgd::MetricGraphDomain, u::Vector{Float64})
+@recipe function f(mgd::MetricGraphDomain{T}, u::Vector{T}) where {T<:Real}
         # Plot the metric graph embedded into the xy plane
         @series begin
                 seriestype := :path3d
@@ -107,7 +109,7 @@ end
         linecolor --> :blue
         label --> ""
         aspect_ratio --> :equal
-        zlims --> (0.0, 1.0)
+        zlims --> (0.0, 1.01)
         []
 end
 
